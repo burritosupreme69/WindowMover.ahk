@@ -1,7 +1,6 @@
 #SingleInstance Force
 SetWorkingDir %A_ScriptDir%
 #InstallMouseHook
-#Include FindText.ahk
 DetectHiddenWindows, On
 start := A_TickCount
  if not A_IsAdmin
@@ -20,12 +19,11 @@ Gui Add, Text, x10 y10 w100 h20, Window Title:
 Gui Add, Text, x120 y10 w200 h40 vWindowTitle
 Gui Add, Text, x10 y40 w100 h20, Executable Name: 
 Gui Add, Text, x120 y40 w200 h20 vEXE_Name, %EXE_Name%
-
 ; Add buttons with centered x values
-Gui Add, Button, x65 y70 w100 h30 gSave_Position, Save Position Ctrl+Shft+S
-Gui Add, Button, x175 y70 w100 h30 gLoad_Positions_From_File, Load Position(s) Ctrl+Shft+L
-Gui Add, Button, x285 y70 w100 h30 gSet_To_Triage, Set to Triage Ctrl+Shft+T
-
+Gui Add, Text, x10 y60 w100 h30 Center, Save Position Ctrl+Shft+S
+Gui, Add, CheckBox, vSaveExeName gSaveExeName, Save as Exe Name(Notepad++ for instance)
+Gui Add, Button, x120 y60 w100 h30 gLoad_Positions_From_File, Load Position(s) Ctrl+Shft+L
+Gui Add, Button, x340 y60 w100 h30 gShow_Hotkeys, DocWin Hotkeys List
 Gui Add, Tab3, x10 y110 gMyTab vMyTab, Profile 1|Profile 2|Profile 3
 
 Gui Tab, 1
@@ -88,6 +86,34 @@ SetTimer, UpdateTitle, 200
 return
 
 
+
+;Insert the hotkey list here for quick viewing.
+Show_Hotkeys:
+Gui, HotkeysList: New, +AlwaysOnTop
+Gui, HotkeysList: Add, Text, x10 y30 w90 h20, Ctrl+=
+Gui, HotkeysList: Add, Text, x105 y30 w125 h20, Clear Clipboard
+Gui, HotkeysList: Add, Text, x10 y60 w90 h20, Ctrl+/
+Gui, HotkeysList: Add, Text, x105 y60 w125 h20, Start Calculator
+Gui, HotkeysList: Add, Text, x10 y90 w90 h20, Ctrl+(Period)
+Gui, HotkeysList: Add, Text, x105 y90 w125 h20, Open Snipping Tool
+Gui, HotkeysList: Show, Autosize , Hotkeys List
+Return
+
+
+
+SaveExeName:
+GuiControlGet, SaveExeName ; Retrieves 1 if it is checked, 0 if it is unchecked.
+If (SaveExeName = 0)
+{
+
+return
+}
+else
+{
+
+return
+}
+
 UpdateTitle:
 
         WinGetActiveTitle, ActiveTitle
@@ -109,10 +135,34 @@ Save_Position:
     Gosub, MyTab
     WinGetActiveTitle, ActiveWinTitle
     
-    MsgBox, 4099, , Save by window title? (Yes) or by exe name? (No)
-     WinActivate, %ActiveWinTitle%
-    IfMsgBox, Yes
-    {
+    WinActivate, %ActiveWinTitle%
+    if (SaveExeName = 1) {
+        this_exe := SubStr(this_exe, 1, StrLen(this_exe)-4)
+        StringUpper, this_exe, this_exe, T
+        GuiControlGet, sel_title, , WindowTitle
+        WinGetPos, Win_X, Win_Y, Win_W, Win_H, %sel_title%
+        
+        ; Keep only the first word in the string
+        spacePos := InStr(this_exe, " ")
+        underscorePos := InStr(this_exe, "_")
+        
+        ; Find the minimum position of space and underscore
+        if (underscorePos > 0 && (spacePos == 0 || underscorePos < spacePos))
+            spacePos := underscorePos
+        
+        if (spacePos > 0) {
+            this_exe := SubStr(this_exe, 1, spacePos-1)
+        }
+        
+        IniWrite, %Win_X%, saved_positions.txt, %this_exe%_%MyTab%, X
+        IniWrite, %Win_Y%, saved_positions.txt, %this_exe%_%MyTab%, Y
+        IniWrite, %Win_W%, saved_positions.txt, %this_exe%_%MyTab%, Width
+        IniWrite, %Win_H%, saved_positions.txt, %this_exe%_%MyTab%, Height
+        IniWrite, %MyTab%, saved_positions.txt, %this_exe%_%MyTab%, Tab
+        IniWrite, "EXE", saved_positions.txt, %this_exe%_%MyTab%, SaveType ; Add this line to save the SaveType
+        Save_Type := "Exe Name"
+    }
+    else {
         GuiControlGet, sel_title, , WindowTitle
         WinGetPos, Win_X, Win_Y, Win_W, Win_H, %sel_title%
         IniWrite, %Win_X%, saved_positions.txt, %sel_title%_%MyTab%, X
@@ -120,24 +170,10 @@ Save_Position:
         IniWrite, %Win_W%, saved_positions.txt, %sel_title%_%MyTab%, Width
         IniWrite, %Win_H%, saved_positions.txt, %sel_title%_%MyTab%, Height
         IniWrite, %MyTab%, saved_positions.txt, %sel_title%_%MyTab%, Tab
+        IniWrite, "WT", saved_positions.txt, %sel_title%_%MyTab%, SaveType ; Add this line to save the SaveType
         Save_Type := "Window Title"
     }
-    IfMsgBox, No
-    {
-        GuiControlGet, sel_title, , WindowTitle
-        WinGetPos, Win_X, Win_Y, Win_W, Win_H, %sel_title%
-        IniWrite, %Win_X%, saved_positions.txt, %this_exe%_%MyTab%, X
-        IniWrite, %Win_Y%, saved_positions.txt, %this_exe%_%MyTab%, Y
-        IniWrite, %Win_W%, saved_positions.txt, %this_exe%_%MyTab%, Width
-        IniWrite, %Win_H%, saved_positions.txt, %this_exe%_%MyTab%, Height
-        IniWrite, %MyTab%, saved_positions.txt, %this_exe%_%MyTab%, Tab
-        Save_Type := "Exe Name"
-    }
-    IfMsgBox, Cancel
-    {
-        Return
-    }
-
+    
     if (MyTab = "Profile 1")
     {
         if (Save_Type = "Window Title")
@@ -146,6 +182,7 @@ Save_Position:
         }
         else
         {
+            
             sel_title := this_exe
         }
         Gosub, List1
@@ -158,6 +195,7 @@ Save_Position:
         }
         else
         {
+           
             sel_title := this_exe 
         }
         Gosub, List2
@@ -170,6 +208,7 @@ Save_Position:
         }
         else
         {
+          
             sel_title := this_exe
         }
         Gosub, List3
@@ -179,8 +218,8 @@ Return
 ;Continue logic flow from previous function
 ^+l::
 Load_Positions_From_File:
-Gosub, MyTab
-SetTimer, UpdateTitle, Off ; The timer being on can interrupt loading the window positions
+    Gosub, MyTab
+    SetTimer, UpdateTitle, Off ; The timer being on can interrupt loading the window positions
     FileRead, data, saved_positions.txt
     Loop, Parse, data, `n
     {
@@ -198,34 +237,41 @@ SetTimer, UpdateTitle, Off ; The timer being on can interrupt loading the window
             IniRead, Win_W, saved_positions.txt, %sel_title%, Width
             IniRead, Win_H, saved_positions.txt, %sel_title%, Height
             IniRead, Tab, saved_positions.txt, %sel_title%, Tab
-          
+            IniRead, SaveType, saved_positions.txt, %sel_title%, SaveType ; Add this line to read the SaveType
+            
             if (Tab == MyTab)
             {                
-              ;  substring := SubStr(new_title, 1, 5)
-              ;If WinExist(substring)
-              ;  {
-              ;      WinActivate
-              ;      SetTitleMatchMode, 1 ;Use the 1 value to match the beginning of titles by the substring. 
-              ;      WinMove, %substring%,, %Win_X%, %Win_Y%, %Win_W%, %Win_H%
-              ;      
-              ;      Sleep, 100
-              ;  }
+                                    SetTitleMatchMode, 1 ;Use the 1 value to match the beginning of titles by the substring. 
 
-              exeFinal = ahk_exe %new_title%
-              If WinExist(exeFinal)
+                substring := SubStr(new_title, 1, 5)
+                If WinExist(substring)
                 {
-                    WinActivate %exeFinal%
-                   ; SetTitleMatchMode, 1 ;Use the 1 value to match the beginning of titles by the substring. 
-                    WinMove, %exeFinal%,, %Win_X%, %Win_Y%, %Win_W%, %Win_H%
-                    
+
+                    WinActivate
+                    WinMove, %substring%,, %Win_X%, %Win_Y%, %Win_W%, %Win_H%
                     Sleep, 100
                 }
-                                           
+                
+                SetTitleMatchMode, 2
+                
+                exeFinal = %new_title%
+                
+                If (SaveType = "EXE") ; Check the SaveType to determine if it's an exe name or window title
+                {
+                    If WinExist(exeFinal)
+                    {      
+                        WinActivate, %exeFinal%
+                        WinMove, %exeFinal%,, %Win_X%, %Win_Y%, %Win_W%, %Win_H%
+                        Sleep, 100
+                    }
+                }
             }
         }
     }
-SetTimer, UpdateTitle, On ;Restart the timer 
+    SetTimer, UpdateTitle, On ;Restart the timer 
 Return
+
+
 ;Updates the MyTab value which stores the current profile.
 MyTab:
 Gui, Submit, Nohide   
@@ -301,13 +347,10 @@ If (MyTab = "Profile 3")
 Return
 
 ;change this to be a dynamic variable that will take in the scripts name
-#IfWinActive, WindowMover.ahk ;ahk_class 
+#If WinActive(A_ScriptName)
+
 Delete::
-ControlGetFocus, OutputVar, WindowMover.ahk
-;if ErrorLevel
-;    MsgBox, The target window doesn't exist or none of its controls has input focus.
-;else
-    
+ControlGetFocus, OutputVar, %A_ScriptName%
 
 if (OutputVar = "SysListView321" or OutputVar = "SysListView322" or OutputVar = "SysListView323") {
    
@@ -321,7 +364,8 @@ else
     Return
 }
 
-#IfWinActive
+#If
+
 DeleteCheck:
 Gosub, MyTab
 If (MyTab = "Profile 1")  
@@ -472,64 +516,6 @@ Return
 
 ;============END OF GUI AND WINDOW MOVING FUNCTIONS============
 
-;===========FINDTEXT FUNCTIONS==========
-; A function to read your messages with less clicking around.
-^+r::
-MouseClick, Right 
-Sleep, 200
-
-
-t1:=A_TickCount, Text:=X:=Y:=""
-
-Text:="|<MarkRead>**50$68.kQ06000DU00S701U003M007Xk0M000n001chtqkwwBXbXv/3NM1s3lgBiKraQ3v0oTSFrB9b0aQBY4YRmmNMNX3BXBj8rqP3zUnDTTU"
-
-if (ok:=FindText(X, Y, -523-150000, 690-150000, -523+150000, 690+150000, 0, 0, Text))
-{
-   FindText().Click(X, Y, "L")
-}
-
-Return
-
-^+t::
-Set_To_Triage:
-
-t1:=A_TickCount, Text:=X:=Y:=""
-Text:="|<TriageGray50>**50$32.zVU00100000E00004TjbrV2MDDAEaSGz48ggg12/BBAFaTTS0000U0003s2"
-
-if (ok:=FindText(X, Y, -523-150000, 690-150000, -523+150000, 690+150000, 0, 0, Text))
-{
-   FindText().Click(X, Y, "L")
-}
-Sleep, 50
-
-If WinExist("Tasks")
-WinMinimize
-Sleep, 50
-Text:="|<MapGray50>**50$20.lU0AM03a00fjjecBCeSHagYt/9C2Ty00A0032"
-
-if (ok:=FindText(X, Y, -1779-150000, 699-150000, -1779+150000, 699+150000, 0, 0, Text))
-{
-   FindText().Click(X, Y, "L")
-}
-Sleep, 50
-If WinExist("Call Center")
-WinMinimize
-Text:="|<WikiGray50>**50$21.U7MS0V0n4M2NvTGd++J9lQd+NX9NAN9g"
-
-if (ok:=FindText(X, Y, -1779-150000, 699-150000, -1779+150000, 699+150000, 0, 0, Text))
-{
-   FindText().Click(X, Y, "L")
-}
-Sleep, 1000
-If WinExist("Wiki -")
-WinMinimize
-Gosub, Load_Positions_From_File
-Return
-
-
-        
-;===========END OF FINDTEXT FUNCTIONS==========
-
 
 ;--= Useful Keys for All ===
 ; Get current Customer # from customer's database
@@ -562,67 +548,10 @@ return
 Run snippingtool.exe
 return
 
-; Remove empty lines or lines containing only spaces and > from clipboard (condenses emails)
-; also removes a couple specific lines of text we don't need to record.
-^#r::
-
-Clipboard := StrReplace(Clipboard, "CAUTION: Not Open Dental internal. Do not click on untrusted items.")
-Clipboard := RegExReplace(Clipboard, "m)(^\s*You don't often get email from \S+ Learn why this is important)", "")
-Clipboard := RegExReplace(Clipboard, "m)(^[>\s]+\R)","")
-return
-
-; Email Sig... copies text from a file called "EmailSig.txt" and outputs it to the cursor
-^+g::
-IfNotExist, %A_ScriptDir%\EmailSig.txt
-{
-    FileAppend,, %A_ScriptDir%\EmailSig.txt
-    MsgBox, 8240, DocWin - Email Signature needed, Email Signature file will open when you click OK. Add your name and role to it then save it. Example:`n`tChris D`n`tEmail and Fax Coordinator`n`nFile Name:`n%A_ScriptDir%\EmailSig.txt
-    Run, %A_ScriptDir%\EmailSig.txt
-}
-FileRead, EmailSig, *t %A_ScriptDir%\EmailSig.txt
-SendInput %EmailSig%
-return
-
-; patNumJump... puts "PatNum:" in front of an entered number so you can hit select to go right to the patient.
-^+X::
-ClipCheck := SubStr(RegExReplace(Clipboard, "[^0-9]", ""), 1, 10) ; get a 2-10 digit number from clipboard, ignoring all non-digit characters, to pre-populate the number.
-
-Gui, PatNumJump:New, , Enter Pat/Task/Ph Num:
-Gui, PatNumJump:Add, Edit, w120 vNumberCheck, %ClipCheck%
-Gui, PatNumJump:Add, Button, vNoButton Default, &OK
-GuiControl, hide, NoButton
-Gui , -SysMenu
-Gui, PatNumJump:Show, Autosize 
-return
-
-PatNumJumpButtonOK:
-    Gui, Submit
-    NumberCheck := RegExReplace(NumberCheck, "[^0-9]", "")
-    if (StrLen(NumberCheck) < 2)
-    {
-        GoSub PatNumJumpGuiClose    
-    }
-    else if (StrLen(NumberCheck) <= 6)
-    {
-        clipboard := "PatNum:" . NumberCheck
-    }
-    else if (StrLen(NumberCheck) <= 9)
-    {
-        clipboard := "TaskNum:" . NumberCheck
-    }
-    else if (StrLen(NumberCheck) = 10)
-    {
-        clipboard := RegExReplace(NumberCheck, "(\d{3})(\d{3})(\d{4})", "($1) $2-$3")
-    }
-
-PatNumJumpGuiEscape:
-PatNumJumpGuiClose:
-    Gui, Destroy
-    return
-;=--
-;=== End Useful Keys for All===
 
 
 
 GuiClose:
 ExitApp   
+
+
