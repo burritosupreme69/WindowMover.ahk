@@ -1,0 +1,1 @@
+AHK Window movement script with multiple tabs. Has other useful hotkeys for opening tools like the Snipping Tool, Calc, etc. Mostly created this for work, but I noticed there didnt seem to be a solution on the market that handled mutiple profiles. 
